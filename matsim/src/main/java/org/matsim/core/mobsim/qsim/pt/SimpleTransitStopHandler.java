@@ -54,8 +54,18 @@ public class SimpleTransitStopHandler implements TransitStopHandler {
 			for (PTPassengerAgent passenger : leavingPassengers) {
 				accessEgress.handlePassengerLeaving(passenger, vehicle, stop.getLinkId(), now);
 			}
-			for (PTPassengerAgent passenger : enteringPassengers) {
-				accessEgress.handlePassengerEntering(passenger, vehicle, stop.getId(), now);
+			while (!enteringPassengers.isEmpty()) {
+				int candidates = enteringPassengers.size();
+				int entered = accessEgress.handlePassengersEntering(enteringPassengers, vehicle, stop.getId(), now);
+				if (enteringPassengers.size() != candidates) {
+					throw new IllegalStateException("Boarding adapter must not mutate the selected candidate list");
+				}
+				if (entered < 0 || entered > candidates) {
+					throw new IllegalStateException("Invalid committed boarding prefix: " + entered
+							+ " for " + candidates + " selected candidates");
+				}
+				if (entered == 0) break;
+				enteringPassengers.subList(0, entered).clear();
 			}
 			for (PTPassengerAgent passenger : relocatingPassengers) {
 				accessEgress.handlePassengerRelocating(passenger, vehicle, stop.getId(), now);

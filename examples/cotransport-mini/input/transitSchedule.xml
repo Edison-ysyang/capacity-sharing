@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE transitSchedule SYSTEM "http://www.matsim.org/files/dtd/transitSchedule_v2.dtd">
+
+<transitSchedule>
+
+	<transitStops>
+		<stopFacility id="destination_stop" x="2000.0" y="0.0" linkRefId="destination_link" isBlocking="false"/>
+		<stopFacility id="origin_stop" x="1000.0" y="0.0" linkRefId="origin_link" isBlocking="false"/>
+	</transitStops>
+	<transitLine id="mixed_line">
+		<transitRoute id="mixed_route">
+			<transportMode>bus</transportMode>
+			<routeProfile>
+				<stop refId="origin_stop" arrivalOffset="00:00:00" departureOffset="00:00:00" awaitDeparture="false"/>
+				<stop refId="destination_stop" arrivalOffset="00:01:00" departureOffset="00:01:00" awaitDeparture="false"/>
+			</routeProfile>
+			<route>
+				<link refId="origin_link"/>
+				<link refId="destination_link"/>
+			</route>
+			<departures>
+				<departure id="departure_0800" departureTime="08:00:00" vehicleRefId="mini_train"/>
+			</departures>
+		</transitRoute>
+	</transitLine>
+</transitSchedule>

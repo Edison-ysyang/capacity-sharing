@@ -32,6 +32,8 @@ import org.matsim.core.mobsim.framework.listeners.*;
 import org.matsim.core.utils.misc.ClassUtils;
 
 import javax.swing.event.EventListenerList;
+import java.util.Arrays;
+import java.util.List;
 
 public final class MobsimListenerManager implements MatsimManager {
 
@@ -43,6 +45,15 @@ public final class MobsimListenerManager implements MatsimManager {
 
 	public MobsimListenerManager(Mobsim sim){
 		this.sim = sim;
+	}
+
+	// Assembly-only detached arrays; never change registration or invocation order.
+	List<Object> registrationsForInspection() {
+		return List.copyOf(Arrays.asList(listenerList.getListenerList()));
+	}
+
+	<T extends MobsimListener> List<T> invocationOrderForInspection(Class<T> type) {
+		return List.copyOf(Arrays.asList(listenerList.getListeners(type)));
 	}
 
 	@SuppressWarnings("unchecked")

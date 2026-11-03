@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<vehicleDefinitions xmlns="http://www.matsim.org/files/dtd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v2.0.xsd">
+
+	<vehicleType id="mini_type">
+		<attributes>
+			<attribute name="accessTimeInSecondsPerPerson" class="java.lang.Double">1.0</attribute>
+			<attribute name="egressTimeInSecondsPerPerson" class="java.lang.Double">1.0</attribute>
+		</attributes>
+		<capacity seats="2" standingRoomInPersons="2">
+
+		</capacity>
+		<length meter="7.5"/>
+		<width meter="1.0"/>
+		<costInformation>
+
+		</costInformation>
+		<passengerCarEquivalents pce="1.0"/>
+		<networkMode networkMode="car"/>
+		<flowEfficiencyFactor factor="1.0"/>
+	</vehicleType>
+
+	<vehicle id="mini_train" type="mini_type"/>
+		
+
+</vehicleDefinitions>

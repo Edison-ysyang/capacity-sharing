@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "iterations": [
+    0
+  ],
+  "completedPassengerTrips": 2,
+  "completedOrders": 1,
+  "deliveredCapacityUnits": 2,
+  "nativeBoardings": 4,
+  "nativeAlightings": 4,
+  "wholeOrderBatches": 1,
+  "nativeDeniedBoardings": 0,
+  "stuckEvents": 0,
+  "capacityConserved": true,
+  "scope": "Single synthetic M example; no learning convergence or T/D validation"
+}

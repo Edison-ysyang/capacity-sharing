@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE population SYSTEM "http://www.matsim.org/files/dtd/population_v6.dtd">
+
+<population>
+
+
+
+<!-- ====================================================================== -->
+
+	<person id="cargo_order">
+		<attributes>
+			<attribute name="subpopulation" class="java.lang.String">freight</attribute>
+		</attributes>
+		<plan selected="yes">
+			<activity type="cargo_origin" link="origin_link" x="1000.0" y="0.0" end_time="07:30:00" >
+			</activity>
+			<leg mode="pt">
+				<route type="default_pt" start_link="origin_link" end_link="destination_link" trav_time="undefined" distance="NaN">{"transitRouteId":"mixed_route","boardingTime":"undefined","transitLineId":"mixed_line","accessFacilityId":"origin_stop","egressFacilityId":"destination_stop"}</route>
+			</leg>
+			<activity type="freight_delivery" link="destination_link" x="2000.0" y="0.0" >
+			</activity>
+		</plan>
+
+	</person>
+
+<!-- ====================================================================== -->
+
+	<person id="cargo_order_cap_02">
+		<attributes>
+			<attribute name="subpopulation" class="java.lang.String">freight</attribute>
+		</attributes>
+		<plan selected="yes">
+			<activity type="cargo_origin" link="origin_link" x="1000.0" y="0.0" end_time="07:30:00" >
+			</activity>
+			<leg mode="pt">
+				<route type="default_pt" start_link="origin_link" end_link="destination_link" trav_time="undefined" distance="NaN">{"transitRouteId":"mixed_route","boardingTime":"undefined","transitLineId":"mixed_line","accessFacilityId":"origin_stop","egressFacilityId":"destination_stop"}</route>
+			</leg>
+			<activity type="freight_delivery" link="destination_link" x="2000.0" y="0.0" >
+			</activity>
+		</plan>
+
+	</person>
+
+<!-- ====================================================================== -->
+
+	<person id="passenger_1">
+		<plan selected="yes">
+			<activity type="home" link="origin_link" x="1000.0" y="0.0" end_time="07:55:00" >
+			</activity>
+			<leg mode="pt">
+				<route type="default_pt" start_link="origin_link" end_link="destination_link" trav_time="undefined" distance="NaN">{"transitRouteId":"mixed_route","boardingTime":"undefined","transitLineId":"mixed_line","accessFacilityId":"origin_stop","egressFacilityId":"destination_stop"}</route>
+			</leg>
+			<activity type="work" link="destination_link" x="2000.0" y="0.0" >
+			</activity>
+		</plan>
+
+	</person>
+
+<!-- ====================================================================== -->
+
+	<person id="passenger_2">
+		<plan selected="yes">
+			<activity type="home" link="origin_link" x="1000.0" y="0.0" end_time="07:55:00" >
+			</activity>
+			<leg mode="pt">
+				<route type="default_pt" start_link="origin_link" end_link="destination_link" trav_time="undefined" distance="NaN">{"transitRouteId":"mixed_route","boardingTime":"undefined","transitLineId":"mixed_line","accessFacilityId":"origin_stop","egressFacilityId":"destination_stop"}</route>
+			</leg>
+			<activity type="work" link="destination_link" x="2000.0" y="0.0" >
+			</activity>
+		</plan>
+
+	</person>
+
+<!-- ====================================================================== -->
+
+</population>

@@ -142,9 +142,9 @@ public class ComplexTransitStopHandler implements TransitStopHandler {
 									break;
 								}
 
-								if (handler.handlePassengerEntering(enteringPassengers.getFirst(), vehicle, stop.getId(), now)) {
-									enteringPassengers.removeFirst();
-									this.passengersEnteringTimeFraction += personEntersTime;
+								int entered = handleEnteringBatch(enteringPassengers, handler, vehicle, stop, now);
+								if (entered > 0) {
+									this.passengersEnteringTimeFraction += entered * personEntersTime;
 								} else {
 									break;
 								}
@@ -233,9 +233,9 @@ public class ComplexTransitStopHandler implements TransitStopHandler {
 								break;
 							}
 
-							if (handler.handlePassengerEntering(enteringPassengers.getFirst(), vehicle, stop.getId(), now)) {
-								enteringPassengers.removeFirst();
-								this.passengersEnteringTimeFraction += personEntersTime;
+							int entered = handleEnteringBatch(enteringPassengers, handler, vehicle, stop, now);
+							if (entered > 0) {
+								this.passengersEnteringTimeFraction += entered * personEntersTime;
 							} else {
 								break;
 							}
@@ -316,6 +316,22 @@ public class ComplexTransitStopHandler implements TransitStopHandler {
 		}
 
 		return stopTime;
+	}
+
+	/** Commit one native agent or an atomic prefix without dropping its processing budget. */
+	private static int handleEnteringBatch(List<PTPassengerAgent> enteringPassengers,
+			PassengerAccessEgress handler, TransitVehicle vehicle, TransitStopFacility stop, double now) {
+		int candidates = enteringPassengers.size();
+		int entered = handler.handlePassengersEntering(enteringPassengers, vehicle, stop.getId(), now);
+		if (enteringPassengers.size() != candidates) {
+			throw new IllegalStateException("Boarding adapter must not mutate the selected candidate list");
+		}
+		if (entered < 0 || entered > candidates) {
+			throw new IllegalStateException("Invalid committed boarding prefix: " + entered
+					+ " for " + candidates + " selected candidates");
+		}
+		if (entered > 0) enteringPassengers.subList(0, entered).clear();
+		return entered;
 	}
 
 	@Override

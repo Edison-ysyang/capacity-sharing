@@ -1,0 +1,3 @@
+time,vehicle,line,route,stop,total_occupancy,passenger_occupancy,freight_occupancy,capacity,load_ratio,freight_share
+08:00:06,mini_train,mixed_line,mixed_route,origin_stop,4,2,2,4,1.000000,0.500000
+08:01:03,mini_train,mixed_line,mixed_route,destination_stop,0,0,0,4,0.000000,0.000000

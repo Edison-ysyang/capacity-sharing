@@ -25,3 +25,12 @@ output/
 #
 *.jar
 .profileconfig.json
+
+# Local research outputs and build caches
+.build-cache/
+.pycache_check/
+__pycache__/
+*.pyc
+outputs/
+tmp/
+examples/cotransport-mini/runs/

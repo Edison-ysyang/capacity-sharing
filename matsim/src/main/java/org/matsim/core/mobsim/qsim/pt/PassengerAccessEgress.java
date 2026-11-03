@@ -40,6 +40,25 @@ public interface PassengerAccessEgress {
 	public boolean handlePassengerEntering(final PTPassengerAgent agent, TransitVehicle vehicle, Id<TransitStopFacility> fromStopFacilityId, final double time);
 
 	/**
+	 * Handles a consecutive prefix of the selected boarding candidates. The default
+	 * preserves the native single-agent entry transition; adapters may override this
+	 * method to commit an indivisible group at the same physical entry clock.
+	 *
+	 * <p>The supplied list must not be mutated by this method. A positive return value
+	 * is the number of successfully committed prefix members, which the stop handler
+	 * then removes and charges its normal per-agent processing time for. Zero means
+	 * nothing was committed and all candidates remain waiting. Implementations must
+	 * never return a partial success for a group declared indivisible.</p>
+	 *
+	 * @return a prefix size between zero and {@code enteringPassengers.size()}
+	 */
+	default int handlePassengersEntering(List<PTPassengerAgent> enteringPassengers,
+			TransitVehicle vehicle, Id<TransitStopFacility> fromStopFacilityId, double time) {
+		if (enteringPassengers.isEmpty()) return 0;
+		return handlePassengerEntering(enteringPassengers.getFirst(), vehicle, fromStopFacilityId, time) ? 1 : 0;
+	}
+
+	/**
 	 * @param agent agent to be handled
 	 * @param time  time the agent should be handled
 	 * @return true, if handled correctly, otherwise false

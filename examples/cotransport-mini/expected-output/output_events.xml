@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<events version="1.0">
+	<event time="27000.0" type="actend" person="cargo_order_cap_02" link="origin_link" x="1000.0" y="0.0" actType="cargo_origin"  />
+	<event time="27000.0" type="departure" person="cargo_order_cap_02" link="origin_link" legMode="pt" computationalRoutingMode="pt"  />
+	<event time="27000.0" type="waitingForPt" person="cargo_order_cap_02" agent="cargo_order_cap_02" atStop="origin_stop" destinationStop="destination_stop"  />
+	<event time="27000.0" type="actend" person="cargo_order" link="origin_link" x="1000.0" y="0.0" actType="cargo_origin"  />
+	<event time="27000.0" type="departure" person="cargo_order" link="origin_link" legMode="pt" computationalRoutingMode="pt"  />
+	<event time="27000.0" type="waitingForPt" person="cargo_order" agent="cargo_order" atStop="origin_stop" destinationStop="destination_stop"  />
+	<event time="28500.0" type="actend" person="passenger_2" link="origin_link" x="1000.0" y="0.0" actType="home"  />
+	<event time="28500.0" type="departure" person="passenger_2" link="origin_link" legMode="pt" computationalRoutingMode="pt"  />
+	<event time="28500.0" type="waitingForPt" person="passenger_2" agent="passenger_2" atStop="origin_stop" destinationStop="destination_stop"  />
+	<event time="28500.0" type="actend" person="passenger_1" link="origin_link" x="1000.0" y="0.0" actType="home"  />
+	<event time="28500.0" type="departure" person="passenger_1" link="origin_link" legMode="pt" computationalRoutingMode="pt"  />
+	<event time="28500.0" type="waitingForPt" person="passenger_1" agent="passenger_1" atStop="origin_stop" destinationStop="destination_stop"  />
+	<event time="28800.0" type="TransitDriverStarts" driverId="pt_mini_train_mini_type" vehicleId="mini_train" transitLineId="mixed_line" transitRouteId="mixed_route" departureId="departure_0800"  />
+	<event time="28800.0" type="departure" person="pt_mini_train_mini_type" link="origin_link" legMode="car"  />
+	<event time="28800.0" type="PersonEntersVehicle" person="pt_mini_train_mini_type" vehicle="mini_train"  />
+	<event time="28800.0" type="vehicle enters traffic" person="pt_mini_train_mini_type" link="origin_link" vehicle="mini_train" networkMode="car" relativePosition="1.0"  />
+	<event time="28800.0" type="VehicleArrivesAtFacility" vehicle="mini_train" facility="origin_stop" delay="0.0"  />
+	<event time="28801.0" type="PersonEntersPtVehicle" person="passenger_2" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28802.0" type="PersonEntersPtVehicle" person="passenger_1" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28803.0" type="PersonEntersPtVehicle" person="cargo_order" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28803.0" type="PersonEntersPtVehicle" person="cargo_order_cap_02" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28806.0" type="VehicleDepartsAtFacility" vehicle="mini_train" facility="origin_stop" delay="6.0"  />
+	<event time="28807.0" type="left link" link="origin_link" vehicle="mini_train"  />
+	<event time="28807.0" type="entered link" link="destination_link" vehicle="mini_train"  />
+	<event time="28857.0" type="VehicleArrivesAtFacility" vehicle="mini_train" facility="destination_stop" delay="-3.0"  />
+	<event time="28858.0" type="PersonLeavesPtVehicle" person="passenger_2" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28858.0" type="arrival" person="passenger_2" link="destination_link" legMode="pt"  />
+	<event time="28858.0" type="actstart" person="passenger_2" link="destination_link" x="2000.0" y="0.0" actType="work"  />
+	<event time="28858.0" type="personScore" person="passenger_2" amount="-0.2933333333333334" kind="coTransportPassengerPhysicalCrowding"  />
+	<event time="28858.0" type="personScore" person="passenger_2" amount="-0.3666666666666667" kind="coTransportPassengerFreightCoPresence"  />
+	<event time="28859.0" type="PersonLeavesPtVehicle" person="passenger_1" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28859.0" type="arrival" person="passenger_1" link="destination_link" legMode="pt"  />
+	<event time="28859.0" type="actstart" person="passenger_1" link="destination_link" x="2000.0" y="0.0" actType="work"  />
+	<event time="28859.0" type="personScore" person="passenger_1" amount="-0.2953333333333334" kind="coTransportPassengerPhysicalCrowding"  />
+	<event time="28859.0" type="personScore" person="passenger_1" amount="-0.37333333333333335" kind="coTransportPassengerFreightCoPresence"  />
+	<event time="28860.0" type="PersonLeavesPtVehicle" person="cargo_order" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28860.0" type="arrival" person="cargo_order" link="destination_link" legMode="pt"  />
+	<event time="28860.0" type="actstart" person="cargo_order" link="destination_link" x="2000.0" y="0.0" actType="freight_delivery"  />
+	<event time="28861.0" type="PersonLeavesPtVehicle" person="cargo_order_cap_02" vehicle="mini_train"  transitLine="mixed_line" transitRoute="mixed_route" />
+	<event time="28861.0" type="arrival" person="cargo_order_cap_02" link="destination_link" legMode="pt"  />
+	<event time="28861.0" type="actstart" person="cargo_order_cap_02" link="destination_link" x="2000.0" y="0.0" actType="freight_delivery"  />
+	<event time="28863.0" type="VehicleDepartsAtFacility" vehicle="mini_train" facility="destination_stop" delay="3.0"  />
+	<event time="28863.0" type="vehicle leaves traffic" person="pt_mini_train_mini_type" link="destination_link" vehicle="mini_train" networkMode="car" relativePosition="1.0"  />
+	<event time="28863.0" type="PersonLeavesVehicle" person="pt_mini_train_mini_type" vehicle="mini_train"  />
+	<event time="28863.0" type="arrival" person="pt_mini_train_mini_type" link="destination_link" legMode="car"  />
+</events>

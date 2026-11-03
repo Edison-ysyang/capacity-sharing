@@ -47,6 +47,8 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 
 	private final int numOfRunners;
 	private ExecutorService pool;
+	// Absent by default: existing native runs retain their scheduling and events.
+	private QNetsimRuntimeInspection.ExecutionBarrier executionBarrier;
 
 //	public QNetsimEngineWithThreadpool(final QSim sim) {
 //		this(sim, null);
@@ -57,7 +59,20 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 		this.numOfRunners = this.numOfThreads;
 	}
 
+	/** Construction value only; does not initialize runners or a thread pool. */
+	int constructionRunnerCount() {
+		return this.numOfRunners;
+	}
+
+	void installExecutionBarrier(QNetsimRuntimeInspection.ExecutionBarrier barrier) {
+		if (executionBarrier != null || pool == null || pool.isShutdown()) {
+			throw new IllegalStateException("Execution barrier already installed or native pool unavailable");
+		}
+		executionBarrier = java.util.Objects.requireNonNull(barrier);
+	}
+
 	@Override public void finishMultiThreading() {
+		if (executionBarrier != null) executionBarrier.closed();
 		this.pool.shutdown();
 	}
 
@@ -86,32 +101,41 @@ final class QNetsimEngineWithThreadpool extends AbstractQNetsimEngine<QNetsimEng
 		// So make sure that no thread sticks out in terms of slowness.  Difficult to achieve, though.  A decade back, we used a "typical" run
 		// as input for the domain decomposition under (b).
 
-		// set current Time
-		for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
-			engine.setTime(time);
-		}
-
+		var tracking = executionBarrier;
+		if (tracking != null) tracking.movingNodes();
 		try {
-			// move nodes
+			// set current Time
 			for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
-				((QNetsimEngineRunnerForThreadpool) engine).setMovingNodes(true);
+				engine.setTime(time);
 			}
-			// wait for completion
-			for (Future<Boolean> future : pool.invokeAll(this.getQnetsimEngineRunner())) {
-				future.get();
+
+			try {
+				// move nodes
+				for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
+					((QNetsimEngineRunnerForThreadpool) engine).setMovingNodes(true);
+				}
+				// wait for completion
+				for (Future<Boolean> future : pool.invokeAll(this.getQnetsimEngineRunner())) {
+					future.get();
+				}
+				// move links
+				if (tracking != null) tracking.movingLinks();
+				for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
+					((QNetsimEngineRunnerForThreadpool) engine).setMovingNodes(false);
+				}
+				// wait for completion
+				for (Future<Boolean> future : pool.invokeAll(this.getQnetsimEngineRunner())) {
+					future.get();
+				}
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e) ;
+			} catch (ExecutionException e) {
+				throw new RuntimeException(e.getCause());
 			}
-			// move links
-			for (AbstractQNetsimEngineRunner engine : this.getQnetsimEngineRunner()) {
-				((QNetsimEngineRunnerForThreadpool) engine).setMovingNodes(false);
-			}
-			// wait for completion
-			for (Future<Boolean> future : pool.invokeAll(this.getQnetsimEngineRunner())) {
-				future.get();
-			}
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e) ;
-		} catch (ExecutionException e) {
-			throw new RuntimeException(e.getCause());
+			if (tracking != null) tracking.completed(time);
+		} catch (RuntimeException | Error failure) {
+			if (tracking != null) tracking.failed();
+			throw failure;
 		}
 	}
 

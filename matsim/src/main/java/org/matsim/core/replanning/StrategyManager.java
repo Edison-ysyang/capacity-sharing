@@ -35,6 +35,8 @@ import org.matsim.core.replanning.selectors.WorstPlanForRemovalSelector;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -64,6 +66,7 @@ public class StrategyManager implements MatsimManager {
 	private static final Logger log = LogManager.getLogger(StrategyManager.class);
 
 	private final GenericStrategyManagerImpl<Plan, Person> delegate;
+	private final Map<ReplanningConfigGroup.StrategySettings, PlanStrategy> configuredStrategies;
 
 	@Inject
 	StrategyManager(ReplanningConfigGroup replanningConfigGroup, PopulationPartition partition,
@@ -71,6 +74,9 @@ public class StrategyManager implements MatsimManager {
 					Map<ReplanningConfigGroup.StrategySettings, PlanStrategy> planStrategies ) {
 
 		this.delegate = new GenericStrategyManagerImpl<>(strategyChooser, partition);
+		// MapBinder values can be unscoped provider products. Preserve the exact instances
+		// consumed here; reinjecting this map elsewhere does not guarantee their identity.
+		this.configuredStrategies = Collections.unmodifiableMap(new LinkedHashMap<>(planStrategies));
 
 		setMaxPlansPerAgent(replanningConfigGroup.getMaxAgentPlanMemorySize());
 
@@ -105,6 +111,18 @@ public class StrategyManager implements MatsimManager {
 
 	public StrategyManager() {
 		this.delegate = new GenericStrategyManagerImpl<>();
+		this.configuredStrategies = Map.of();
+	}
+
+	/**
+	 * The configuration-to-instance association actually consumed by this manager's injected
+	 * constructor. The association is structurally read-only; it is not a second provider lookup.
+	 * Manually constructed managers return an empty map, even after {@link #addStrategy} calls.
+	 * Callers scheduling changes must also verify the instance is still registered in its
+	 * configured subpopulation, because strategies may subsequently be removed.
+	 */
+	public final Map<ReplanningConfigGroup.StrategySettings, PlanStrategy> getConfiguredStrategies() {
+		return configuredStrategies;
 	}
 
 	/**

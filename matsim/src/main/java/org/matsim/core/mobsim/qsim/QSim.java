@@ -176,6 +176,29 @@ public final class QSim implements Netsim {
 	private final Collection<AgentTracker> agentTrackers = new ArrayList<>();
 
 	private final Injector childInjector;
+	private QSimPreparationCheck preparationCheck;
+	private Thread preparationStartThread;
+	private Thread preparationCheckThread;
+	private QSimStepBoundaryCheck stepBoundaryCheck;
+	private Thread beforeSimStepThread;
+	private Thread eventsProcessedThread;
+	private Thread eventsFinishedThread;
+
+	@Inject(optional = true)
+	void setStepBoundaryCheck(QSimStepBoundaryCheck check) {
+		Objects.requireNonNull(check, "stepBoundaryCheck");
+		if (this.stepBoundaryCheck != null) throw new IllegalStateException("A QSim step boundary check is already registered");
+		this.stepBoundaryCheck = check;
+	}
+
+	@Inject(optional = true)
+	void setPreparationCheck(QSimPreparationCheck preparationCheck) {
+		Objects.requireNonNull(preparationCheck, "preparationCheck");
+		if (this.preparationCheck != null) {
+			throw new IllegalStateException("A QSim preparation check is already registered");
+		}
+		this.preparationCheck = preparationCheck;
+	}
 
 	@Override
 	public final void rescheduleActivityEnd(MobsimAgent agent) {
@@ -221,7 +244,23 @@ public final class QSim implements Netsim {
 			// ActivityEngine must be last (=default) activity handler, so add it only before running:
 			this.activityHandlers.add(this.activityEngine);
 
+			if (this.preparationCheck != null) {
+				this.preparationStartThread = Thread.currentThread();
+				try {
+					this.preparationCheck.beforePreparation(this);
+				} finally {
+					this.preparationStartThread = null;
+				}
+			}
 			prepareSim();
+			if (this.preparationCheck != null) {
+				this.preparationCheckThread = Thread.currentThread();
+				try {
+					this.preparationCheck.afterPrepared(this);
+				} finally {
+					this.preparationCheckThread = null;
+				}
+			}
 			this.listenerManager.fireQueueSimulationInitializedEvent();
 
 			// Put agents into the handler for their first ("overnight") action,
@@ -348,6 +387,14 @@ public final class QSim implements Netsim {
 
 		if (gotException) throw new RuntimeException("got exception while cleaning up the QSim. Please check the error messages above for details.");
 		events.finishProcessing();
+		if (this.stepBoundaryCheck != null) {
+			this.eventsFinishedThread = Thread.currentThread();
+			try {
+				this.stepBoundaryCheck.afterEventsFinished(this);
+			} finally {
+				this.eventsFinishedThread = null;
+			}
+		}
 		if (analyzeRunTimes) {
 			log.info("qsim internal cpu time (nanos): " + qSimInternalTime);
 			for (Entry<MobsimEngine, AtomicLong> entry : this.mobsimEngineRunTimes.entrySet()) {
@@ -371,7 +418,12 @@ public final class QSim implements Netsim {
 
 		final double now = this.getSimTimer().getTimeOfDay();
 
-		this.listenerManager.fireQueueSimulationBeforeSimStepEvent(now);
+		this.beforeSimStepThread = Thread.currentThread();
+		try {
+			this.listenerManager.fireQueueSimulationBeforeSimStepEvent(now);
+		} finally {
+			this.beforeSimStepThread = null;
+		}
 
 		if (analyzeRunTimes) this.qSimInternalTime += System.nanoTime() - this.startClockTime;
 
@@ -403,10 +455,17 @@ public final class QSim implements Netsim {
 		// console printout:
 		this.printSimLog(now);
 
-		// trigger the after sim step listeners before finishing the events processing of this sim step.
-		// this gives after sim step listeners like snapshot generator the opportunity to generate events
-		// for the current time step.
+		// Preserve native order: drain engine events, then notify After listeners.
+		// Those listeners can still generate same-time events after this drain.
 		this.events.afterSimStep(now);
+		if (this.stepBoundaryCheck != null) {
+			this.eventsProcessedThread = Thread.currentThread();
+			try {
+				this.stepBoundaryCheck.afterEventsProcessed(this, now);
+			} finally {
+				this.eventsProcessedThread = null;
+			}
+		}
 		this.listenerManager.fireQueueSimulationAfterSimStepEvent(now);
 
 
@@ -709,6 +768,69 @@ public final class QSim implements Netsim {
 
 	public Injector getChildInjector() {
 		return this.childInjector;
+	}
+
+	boolean isAtPreparationStartForInspection() {
+		return preparationStartThread != null && preparationStartThread == Thread.currentThread();
+	}
+
+	boolean isAtPreparationCheckForInspection() {
+		return preparationCheckThread != null && preparationCheckThread == Thread.currentThread();
+	}
+
+	boolean isAtBeforeSimStepForInspection() {
+		return beforeSimStepThread != null && beforeSimStepThread == Thread.currentThread();
+	}
+
+	boolean isAtEventsProcessedForInspection() {
+		return eventsProcessedThread != null && eventsProcessedThread == Thread.currentThread();
+	}
+
+	boolean isAtEventsFinishedForInspection() {
+		return eventsFinishedThread != null && eventsFinishedThread == Thread.currentThread();
+	}
+
+	/** Detached, assembly-only roles; not a registration lock or a producer seal. */
+	boolean activeNetworkEngineIsForInspection(QNetsimEngineI expected) {
+		return netEngine == expected;
+	}
+
+	boolean singleNetworkEngineRegistrationForInspection(QNetsimEngineI expected) {
+		int registered = 0;
+		int steps = withindayEngine == expected ? 1 : 0;
+		for (MobsimEngine engine : mobsimEngines) {
+			if (engine == expected) registered++;
+			if (engine != withindayEngine && engine == expected) steps++;
+		}
+		return registered == 1 && steps == 1;
+	}
+
+	Map<QSimRuntimeInspection.Role, List<?>> runtimeComponentsForInspection() {
+		var roles = new LinkedHashMap<QSimRuntimeInspection.Role, List<?>>();
+		roles.put(QSimRuntimeInspection.Role.EVENT_MANAGER, List.of(events));
+		roles.put(QSimRuntimeInspection.Role.ACTIVE_NETWORK_ENGINE, QSimRuntimeInspection.present(netEngine));
+		roles.put(QSimRuntimeInspection.Role.ACTIVE_ACTIVITY_ENGINE, QSimRuntimeInspection.present(activityEngine));
+		roles.put(QSimRuntimeInspection.Role.ACTIVE_TELEPORTATION_ENGINE, QSimRuntimeInspection.present(teleportationEngine));
+		roles.put(QSimRuntimeInspection.Role.EARLY_WITHIN_DAY_ENGINE, QSimRuntimeInspection.present(withindayEngine));
+		roles.put(QSimRuntimeInspection.Role.REGISTERED_ENGINE, List.copyOf(mobsimEngines));
+		var stepOrder = new ArrayList<MobsimEngine>();
+		if (withindayEngine != null) stepOrder.add(withindayEngine);
+		for (MobsimEngine engine : mobsimEngines) if (engine != withindayEngine) stepOrder.add(engine);
+		roles.put(QSimRuntimeInspection.Role.STEP_ENGINE, List.copyOf(stepOrder));
+		roles.put(QSimRuntimeInspection.Role.ACTIVITY_HANDLER, List.copyOf(activityHandlers));
+		roles.put(QSimRuntimeInspection.Role.DEPARTURE_HANDLER, List.copyOf(departureHandlers));
+		roles.put(QSimRuntimeInspection.Role.AGENT_SOURCE, List.copyOf(agentSources));
+		roles.put(QSimRuntimeInspection.Role.AGENT_TRACKER, List.copyOf(agentTrackers));
+		roles.put(QSimRuntimeInspection.Role.LISTENER_REGISTRATION_PAIRS, listenerManager.registrationsForInspection());
+		roles.put(QSimRuntimeInspection.Role.INITIALIZED_LISTENER, listenerManager.invocationOrderForInspection(
+				org.matsim.core.mobsim.framework.listeners.MobsimInitializedListener.class));
+		roles.put(QSimRuntimeInspection.Role.BEFORE_STEP_LISTENER, listenerManager.invocationOrderForInspection(
+				org.matsim.core.mobsim.framework.listeners.MobsimBeforeSimStepListener.class));
+		roles.put(QSimRuntimeInspection.Role.AFTER_STEP_LISTENER, listenerManager.invocationOrderForInspection(
+				org.matsim.core.mobsim.framework.listeners.MobsimAfterSimStepListener.class));
+		roles.put(QSimRuntimeInspection.Role.BEFORE_CLEANUP_LISTENER, listenerManager.invocationOrderForInspection(
+				org.matsim.core.mobsim.framework.listeners.MobsimBeforeCleanupListener.class));
+		return Collections.unmodifiableMap(roles);
 	}
 
 	public final void addNetworkChangeEvent(NetworkChangeEvent event) {

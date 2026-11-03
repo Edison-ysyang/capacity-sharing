@@ -1,0 +1,2 @@
+iteration,phase_active,treatment_active,schedule_active,freight_active,registered_freight_persons,freight_agents_installed,freight_events,freight_boardings,passenger_stuck_events,passenger_stuck_persons
+0,true,true,false,true,2,2,6,2,0,0

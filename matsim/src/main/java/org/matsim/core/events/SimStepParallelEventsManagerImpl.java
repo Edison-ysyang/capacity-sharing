@@ -59,6 +59,8 @@ class SimStepParallelEventsManagerImpl implements EventsManager {
 	private CyclicBarrier simStepEndBarrier;
 	private CyclicBarrier iterationEndBarrier;
     private ProcessEventsRunnable[] runnables;
+	// Retained only for read-only verification of the actual native receiving thread.
+	private Thread[] workerThreads;
 	private EventsManagerImpl[] eventsManagers;
 	private EventsManagerImpl delegate;
 	private ProcessedEventsChecker processedEventsChecker;
@@ -163,6 +165,7 @@ class SimStepParallelEventsManagerImpl implements EventsManager {
                 simStepEndBarrier, iterationEndBarrier);
 
 		runnables = new ProcessEventsRunnable[numOfThreads];
+		workerThreads = new Thread[numOfThreads];
 		for (int i = 0; i < numOfThreads; i++) {
 			ProcessEventsRunnable processEventsRunnable = new ProcessEventsRunnable(eventsManagers[i], processedEventsChecker,
                     waitForEmptyQueuesBarrier, simStepEndBarrier, iterationEndBarrier, eventsQueues.get(i), eventsQueues.get(i + 1));
@@ -171,6 +174,7 @@ class SimStepParallelEventsManagerImpl implements EventsManager {
 			thread.setDaemon(true);
 			thread.setUncaughtExceptionHandler(uncaughtExceptionHandler);
 			thread.setName(ProcessEventsRunnable.class.toString() + i);
+			workerThreads[i] = thread;
 			thread.start();
 		}
 
@@ -249,6 +253,24 @@ class SimStepParallelEventsManagerImpl implements EventsManager {
 			throw new RuntimeException(e);
 		}
     }
+
+	SimStepEventsRuntimeInspection.Snapshot runtimeForInspection(List<Class<? extends Event>> eventClasses) {
+		List<EventsManagerImpl.RuntimeInspectionSnapshot> workers = new ArrayList<>();
+		for (EventsManagerImpl manager : eventsManagers) {
+			workers.add(manager.inspectRuntimeRegistrations(eventClasses));
+		}
+		return new SimStepEventsRuntimeInspection.Snapshot(this, numOfThreads, parallelMode,
+				hadException.get() != null, runnables, workerThreads,
+				delegate.inspectRuntimeRegistrations(eventClasses), workers);
+	}
+
+	boolean currentThreadIsWorkerForInspection() {
+		Thread[] actualThreads = workerThreads;
+		if (actualThreads == null) return false;
+		Thread current = Thread.currentThread();
+		for (Thread worker : actualThreads) if (worker == current) return true;
+		return false;
+	}
 
 	private static class ProcessEventsRunnable implements Runnable {
 

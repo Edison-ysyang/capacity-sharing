@@ -27,8 +27,10 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Test;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.core.api.experimental.events.AgentWaitingForPtEvent;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.pt.fakes.FakeAgent;
 import org.matsim.pt.transitSchedule.TransitScheduleFactoryImpl;
 import org.matsim.pt.transitSchedule.api.TransitScheduleFactory;
@@ -41,6 +43,61 @@ import org.matsim.pt.transitSchedule.api.TransitStopFacility;
 public class TransitStopAgentTrackerTest {
 
 	private static final Logger log = LogManager.getLogger(TransitStopAgentTrackerTest.class);
+
+	@Test
+	void repeatedRegistrationKeepsOneQueueEntryOneClockAndOneWaitingEvent() {
+		EventsManager events = EventsUtils.createEventsManager();
+		java.util.List<org.matsim.api.core.v01.events.Event> recorded = new java.util.ArrayList<>();
+		events.addHandler((BasicEventHandler) recorded::add);
+		TransitStopAgentTracker tracker = new TransitStopAgentTracker(events);
+		PTPassengerAgent agent = new FakeAgent(null, null);
+		var stop = Id.create("stop", TransitStopFacility.class);
+		tracker.addAgentToStop(10, agent, stop);
+		var first = tracker.getQueueArrival(agent, stop);
+		tracker.addAgentToStop(20, agent, stop);
+		assertEquals(1, tracker.getAgentsAtFacility(stop).size());
+		assertEquals(first, tracker.getQueueArrival(agent, stop));
+		assertEquals(10, first.readyTimeSeconds());
+		assertEquals(1, recorded.stream().filter(AgentWaitingForPtEvent.class::isInstance).count());
+		tracker.removeAgentFromStop(agent, stop);
+		assertTrue(tracker.getAgentsAtFacility(stop).isEmpty());
+		assertThrows(IllegalStateException.class, () -> tracker.getQueueArrival(agent, stop));
+	}
+
+	@Test
+	void queueArrivalSurvivesWaitingAndIsRemovedOrResetForANewEpisode() {
+		TransitStopAgentTracker tracker = new TransitStopAgentTracker(EventsUtils.createEventsManager());
+		PTPassengerAgent agent = new FakeAgent(null, null);
+		var stop = Id.create("first", TransitStopFacility.class);
+		var nextStop = Id.create("next", TransitStopFacility.class);
+		tracker.addAgentToStop(10.25, agent, stop);
+		var first = tracker.getQueueArrival(agent, stop);
+		assertEquals(10.25, first.readyTimeSeconds());
+		assertEquals(first, tracker.getQueueArrival(agent, stop));
+		tracker.removeAgentFromStop(agent, stop);
+		assertThrows(IllegalStateException.class, () -> tracker.getQueueArrival(agent, stop));
+		tracker.addAgentToStop(80.5, agent, nextStop);
+		assertEquals(80.5, tracker.getQueueArrival(agent, nextStop).readyTimeSeconds());
+		assertTrue(tracker.getQueueArrival(agent, nextStop).sequence() > first.sequence());
+		tracker.clearWaitingAgents();
+		assertTrue(tracker.getAgentsAtStop().isEmpty());
+		assertThrows(IllegalStateException.class, () -> tracker.getQueueArrival(agent, nextStop));
+		tracker.addAgentToStop(1, agent, stop);
+		assertEquals(0, tracker.getQueueArrival(agent, stop).sequence());
+	}
+
+	@Test
+	void exactTimeTiesHaveIncreasingRegistrationSequencesAndInvalidTimesFailBeforeEnqueue() {
+		TransitStopAgentTracker tracker = new TransitStopAgentTracker(EventsUtils.createEventsManager());
+		PTPassengerAgent first = new FakeAgent(null, null);
+		PTPassengerAgent second = new FakeAgent(null, null);
+		var stop = Id.create("stop", TransitStopFacility.class);
+		tracker.addAgentToStop(10, first, stop);
+		tracker.addAgentToStop(10, second, stop);
+		assertTrue(tracker.getQueueArrival(first, stop).sequence() < tracker.getQueueArrival(second, stop).sequence());
+		assertThrows(IllegalArgumentException.class, () -> tracker.addAgentToStop(Double.NaN, new FakeAgent(null, null), stop));
+		assertEquals(2, tracker.getAgentsAtFacility(stop).size());
+	}
 
 	@Test
 	void testAddAgent() {

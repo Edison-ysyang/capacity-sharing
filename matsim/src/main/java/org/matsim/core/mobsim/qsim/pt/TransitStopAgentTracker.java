@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author mrieser
@@ -48,6 +49,16 @@ public class TransitStopAgentTracker implements AgentTracker {
 
 	private final EventsManager events;
 	private final Map<Id<TransitStopFacility>, List<PTPassengerAgent>> agentsAtStops = new ConcurrentHashMap<>();
+	private final Map<Id<TransitStopFacility>, Map<PTPassengerAgent, QueueArrival>> queueArrivals = new ConcurrentHashMap<>();
+	private final AtomicLong queueSequence = new AtomicLong();
+
+	/** One physical waiting episode, retained when a train cannot take the agent. */
+	public record QueueArrival(double readyTimeSeconds, long sequence) {
+		public QueueArrival {
+			if (!Double.isFinite(readyTimeSeconds) || readyTimeSeconds < 0 || sequence < 0)
+				throw new IllegalArgumentException("Queue arrival requires a finite nonnegative time and sequence");
+		}
+	}
 
 	/**
 	 * Map of departure ids to the number of chained departures that need to arrive.
@@ -68,13 +79,17 @@ public class TransitStopAgentTracker implements AgentTracker {
 		if (stopId == null) {
 			throw new NullPointerException("stop must not be null.");
 		}
-		List<PTPassengerAgent> agents = this.agentsAtStops.get(stopId);
-		if (agents == null) {
-			agents = new CopyOnWriteArrayList<>();// TODO check again. this might turn out to be slow, but we likely need something thread safe here. marcel/oct2014
-			this.agentsAtStops.put(stopId, agents);
-		}
-		if ( !agents.add(agent) ) {
-			log.error("did NOT add agent " + agent.getId() + " since it was already there.");
+		List<PTPassengerAgent> agents = this.agentsAtStops.computeIfAbsent(stopId,
+				ignored -> new CopyOnWriteArrayList<>());
+		// Publish metadata before the candidate becomes visible to a vehicle. The
+		// same stop lock makes repeated registration idempotent: neither the queue
+		// entry, its original clock nor the waiting event may be duplicated.
+		synchronized (agents) {
+			Map<PTPassengerAgent, QueueArrival> arrivals = queueArrivals.computeIfAbsent(stopId,
+					ignored -> new ConcurrentHashMap<>());
+			if (arrivals.containsKey(agent)) return;
+			arrivals.put(agent, new QueueArrival(now, queueSequence.getAndIncrement()));
+			agents.add(agent);
 		}
 		Id<TransitStopFacility> destinationStopId = agent.getDesiredDestinationStopId();
 		events.processEvent(new AgentWaitingForPtEvent(now, agent.getId(), stopId, destinationStopId));
@@ -86,12 +101,33 @@ public class TransitStopAgentTracker implements AgentTracker {
 		}
 		List<PTPassengerAgent> agents = this.agentsAtStops.get(stopId);
 		if (agents != null) {
-			if (!agents.remove(agent)) {
-				log.error("Agent " + agent.getId() + " could not be removed from waiting at stop " + stopId);
+			synchronized (agents) {
+				if (!agents.remove(agent)) {
+					log.error("Agent " + agent.getId() + " could not be removed from waiting at stop " + stopId);
+				} else {
+					Map<PTPassengerAgent, QueueArrival> arrivals = queueArrivals.get(stopId);
+					if (arrivals != null) arrivals.remove(agent);
+				}
 			}
 		} else {
 			log.error("Agent " + agent.getId() + " could not be removed from waiting at stop " + stopId + " since agents list was null.");
 		}
+	}
+
+	/** Missing metadata is an error for explicit arrival-based policies, never an ID fallback. */
+	public QueueArrival getQueueArrival(PTPassengerAgent agent, Id<TransitStopFacility> stopId) {
+		Map<PTPassengerAgent, QueueArrival> arrivals = queueArrivals.get(stopId);
+		QueueArrival arrival = arrivals == null ? null : arrivals.get(agent);
+		if (arrival == null)
+			throw new IllegalStateException("No native queue arrival for agent " + agent.getId() + " at stop " + stopId);
+		return arrival;
+	}
+
+	/** Clears waiting episodes and their clocks together at the end of a simulation day. */
+	public void clearWaitingAgents() {
+		agentsAtStops.clear();
+		queueArrivals.clear();
+		queueSequence.set(0);
 	}
 
 	/**

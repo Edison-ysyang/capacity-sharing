@@ -1,0 +1,2 @@
+order_id,release_time,deadline_time,volume_m3,mass_kg,service_class,priority,capacity_units
+cargo_order,07:30:00,08:30:00,0.5,5.0,standard,1,2

@@ -1,0 +1,2 @@
+iteration;completed_passenger_trips;completed_pt_trips;door_to_door_mean_min;door_to_door_p50_min;door_to_door_p95_min;pt_door_to_door_mean_min;pt_door_to_door_p50_min;pt_door_to_door_p95_min;pt_wait_mean_min;pt_wait_p50_min;pt_wait_p95_min;pt_in_vehicle_mean_min;pt_in_vehicle_p50_min;pt_in_vehicle_p95_min
+0;2;2;5.975;5.966666666666667;5.983333333333333;5.975;5.966666666666667;5.983333333333333;5.025;5.016666666666667;5.033333333333333;0.95;0.95;0.95
